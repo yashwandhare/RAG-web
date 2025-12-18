@@ -29,10 +29,10 @@ htmlcov/
 # OS
 .DS_Store
 
-# Chroma/Vector DB data
-chroma_db/
+# Backend data
+backend/data/chroma_db/
 
-# Node/Frontend (if present)
-node_modules/
+# Frontend (if using build tools)
+frontend/node_modules/
 frontend/dist/
 frontend/build/

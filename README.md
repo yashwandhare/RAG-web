@@ -1,29 +1,54 @@
-# RAG
+# RAG Web
 
-A Retrieval-Augmented Generation (RAG) system built with FastAPI that enables intelligent question-answering over web content.
+A production-ready Retrieval-Augmented Generation (RAG) system with a FastAPI backend and web frontend for intelligent question-answering over web content.
 
 ## Features
 
-- Web content crawling and indexing
-- Vector-based semantic search using ChromaDB
-- LLM-powered response generation
-- RESTful API endpoints
-- Simple web interface
+- 🕷️ Web content crawling and indexing
+- 🔍 Vector-based semantic search using ChromaDB
+- 🤖 LLM-powered response generation (Google Gemini)
+- 🚀 RESTful API architecture
+- 💻 Terminal-style web interface
+
+## Project Structure
+
+```
+RAG-web/
+├── backend/              # FastAPI backend service
+│   ├── app/
+│   │   ├── api/         # API endpoints
+│   │   ├── core/        # Configuration & logging
+│   │   ├── rag/         # RAG system (crawler, chunker, retriever, etc.)
+│   │   └── main.py      # FastAPI application
+│   ├── data/            # Database storage
+│   │   └── chroma_db/   # Vector database
+│   ├── requirements.txt
+│   └── .env.example
+├── frontend/            # Static web interface
+│   └── index.html       # Single-page app
+├── README.md
+└── LICENSE
+```
 
 ## Tech Stack
 
-- **FastAPI** - Web framework
-- **ChromaDB** - Vector database
-- **Google Gemini** - LLM for generation
-- **BeautifulSoup4** - Web scraping
-- **Sentence Transformers** - Embeddings
+**Backend:**
+- FastAPI - Modern Python web framework
+- ChromaDB - Vector database for embeddings
+- Google Gemini - Large language model
+- BeautifulSoup4 - Web scraping
+- Sentence Transformers - Text embeddings
 
-## Installation
+**Frontend:**
+- Vanilla HTML/CSS/JS - No dependencies, lightweight
 
-1. Clone the repository:
+## Quick Start
+
+### Backend Setup
+
+1. Navigate to backend directory:
 ```bash
-git clone https://github.com/yashwandhare/RAG-web.git
-cd RAG-web
+cd backend
 ```
 
 2. Install dependencies:
@@ -31,30 +56,47 @@ cd RAG-web
 pip install -r requirements.txt
 ```
 
-3. Set up environment variables:
+3. Configure environment:
 ```bash
-export GOOGLE_API_KEY=your_api_key_here
+cp .env.example .env
+# Add your GOOGLE_API_KEY to .env
 ```
 
-## Usage
-
-Start the server:
+4. Start the API server:
 ```bash
 uvicorn app.main:app --reload
 ```
 
-The API will be available at `http://localhost:8000`
+Backend runs at: `http://localhost:8000`
+API docs at: `http://localhost:8000/docs`
 
-### API Endpoints
+### Frontend Setup
+
+1. Navigate to frontend directory:
+```bash
+cd frontend
+```
+
+2. Serve with any static server:
+```bash
+python -m http.server 8080
+```
+
+Frontend runs at: `http://localhost:8080`
+
+## API Endpoints
 
 - `GET /` - Health check
-- `POST /api/v1/index` - Index a URL
-- `POST /api/v1/query` - Query the indexed content
+- `POST /api/v1/index` - Index a URL for RAG
+- `POST /api/v1/query` - Query indexed content
 
 ## Development
 
-Access the interactive API docs at `http://localhost:8000/docs`
+The backend and frontend are completely decoupled and communicate only via REST API. You can:
+- Run them on different ports/servers
+- Deploy them separately
+- Replace the frontend with any other client (mobile app, CLI, etc.)
 
 ## License
 
-MIT License - see LICENSE file for details
+MIT License - see [LICENSE](LICENSE) file for details

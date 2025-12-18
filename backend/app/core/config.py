@@ -31,10 +31,10 @@ class Settings(BaseSettings):
     MAX_PAGES_PER_INDEX: int = 50
     
     # ==================== Application ====================
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
+    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000", "http://localhost:8080"]
     LOG_LEVEL: str = "INFO"
     ENVIRONMENT: str = "development"
-    CHROMA_PERSIST_DIR: str = "./chroma_db"
+    CHROMA_PERSIST_DIR: str = "./data/chroma_db"
     
     class Config:
         env_file = ".env"
