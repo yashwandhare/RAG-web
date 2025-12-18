@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+pydantic-settings
+python-dotenv
+aiohttp
+beautifulsoup4
+pypdf
+chromadb
+sentence-transformers
+google-genai
+python-multipart
