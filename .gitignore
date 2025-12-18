@@ -31,6 +31,8 @@ htmlcov/
 
 # Backend data
 backend/data/chroma_db/
+backend/chroma_db/
+data/
 
 # Frontend (if using build tools)
 frontend/node_modules/
