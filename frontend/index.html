@@ -6,6 +6,7 @@
     <title>RAGx // ARCHIVE</title>
     <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         :root {
             /* --- Palette --- */
@@ -264,6 +265,33 @@
             animation: pulse 1s infinite; margin-right: 8px;
         }
         @keyframes pulse { 0% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.1); } 100% { opacity: 0.3; transform: scale(0.8); } }
+
+        /* Typing Indicator Animation */
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 10px;
+            background: rgba(37, 50, 86, 0.05);
+            border-radius: 12px;
+            width: fit-content;
+            margin-bottom: 10px;
+        }
+
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--text-blue);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); opacity: 0.3; }
+            40% { transform: scale(1); opacity: 1; }
+        }
 
         .mobile-only-nav { display: none; }
         .menu-toggle { display: none; background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; }
@@ -608,7 +636,18 @@
         function addLoadingBubble() {
             const id = 'loader-' + Date.now();
             const area = document.getElementById('messagesArea');
-            area.insertAdjacentHTML('beforeend', `<div id="${id}" class="msg-row bot"><div class="bubble bot"><span class="loader"></span> Thinking...</div></div>`);
+            const html = `
+                <div id="${id}" class="msg-row bot">
+                    <div class="bubble bot" style="display: flex; align-items: center; gap: 12px; background: transparent; border: none; padding: 0;">
+                        <div class="typing-indicator">
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                        </div>
+                        <span style="font-size: 0.9rem; color: var(--text-sub); font-style: italic;">Processing your question...</span>
+                    </div>
+                </div>`;
+            area.insertAdjacentHTML('beforeend', html);
             area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' });
             return id;
         }

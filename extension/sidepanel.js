@@ -1,5 +1,5 @@
 /**
- * RAGx Companion - Side Panel Controller
+ * RAGex Companion - Side Panel Controller
  * ========================================
  * Handles all side panel interactions, API communication, and UI updates.
  */
@@ -21,6 +21,9 @@ const STATE = {
     isProcessing: false,
     currentTab: null
 };
+
+// Typing animation state
+let isTyping = false;
 
 // ==================== DOM Elements Cache ====================
 // Cache DOM elements for better performance
@@ -45,7 +48,7 @@ const DOM = {
  * Initialize the extension when side panel loads
  */
 async function initialize() {
-    console.log('[RAGx] Initializing side panel...');
+    console.log('[RAGex] Initializing side panel...');
     
     // Cache DOM elements
     cacheDOMElements();
@@ -62,7 +65,7 @@ async function initialize() {
     // Load session history from storage
     await loadSessionHistory();
     
-    console.log('[RAGx] Initialization complete');
+    console.log('[RAGex] Initialization complete');
 }
 
 /**
@@ -117,7 +120,7 @@ function setupEventListeners() {
     // Tab change listener (when user switches tabs and comes back)
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
-    console.log('[RAGx] Event listeners attached');
+    console.log('[RAGex] Event listeners attached');
 }
 
 // ==================== Tab Management ====================
@@ -137,7 +140,7 @@ async function getCurrentTab() {
                 
                 // Check if URL changed (for re-scan)
                 if (STATE.currentUrl && STATE.currentUrl !== newUrl && STATE.isConnected) {
-                    console.log('[RAGx] URL changed, need to re-scan');
+                    console.log('[RAGex] URL changed, need to re-scan');
                     DOM.scanBtn.textContent = 'Connect';
                     DOM.scanBtn.classList.add('glow-button');
                     STATE.isConnected = false;
@@ -153,24 +156,24 @@ async function getCurrentTab() {
                 DOM.urlDisplay.classList.add('active');
                 DOM.scanBtn.disabled = false;
                 
-                console.log('[RAGx] Current tab:', hostname);
+                console.log('[RAGex] Current tab:', hostname);
             } else {
                 // Restricted page (chrome://, about:, etc.)
                 DOM.urlDisplay.textContent = 'Restricted Page';
                 DOM.scanBtn.disabled = true;
                 DOM.scanBtn.title = 'Cannot analyze this type of page';
                 
-                console.warn('[RAGx] Restricted page detected');
+                console.warn('[RAGex] Restricted page detected');
             }
         } else {
             DOM.urlDisplay.textContent = 'No Active Tab';
             DOM.scanBtn.disabled = true;
             
-            console.warn('[RAGx] No active tab found');
+            console.warn('[RAGex] No active tab found');
         }
         
     } catch (error) {
-        console.error('[RAGx] Error getting current tab:', error);
+        console.error('[RAGex] Error getting current tab:', error);
         showError('Failed to access current tab');
     }
 }
@@ -180,7 +183,7 @@ async function getCurrentTab() {
  */
 async function handleVisibilityChange() {
     if (!document.hidden) {
-        console.log('[RAGx] Tab became visible, checking for URL changes');
+        console.log('[RAGex] Tab became visible, checking for URL changes');
         await getCurrentTab();
     }
 }
@@ -211,24 +214,20 @@ async function checkBackendHealth() {
         
         if (response.ok) {
             updateStatus('ready', 'Ready');
-            console.log('[RAGx] Backend is healthy');
+            console.log('[RAGex] Backend is healthy');
             return true;
         } else {
             updateStatus('error', 'Backend Error');
-            console.error('[RAGx] Backend returned error:', response.status);
+            console.error('[RAGex] Backend returned error:', response.status);
             return false;
         }
         
     } catch (error) {
         updateStatus('error', 'Backend Offline');
-        console.error('[RAGx] Backend health check failed:', error);
+        console.error('[RAGex] Backend health check failed:', error);
         
-        // Show helpful message
-        addMessage(
-            '⚠️ Cannot connect to RAGx backend. Please ensure the backend server is running at ' + CONFIG.API_BASE,
-            'bot',
-            { isError: true }
-        );
+        // Don't show error message immediately - only when user tries to interact
+        console.warn('[RAGex] Backend is offline. Will show error when user tries to use the extension.');
         
         return false;
     }
@@ -265,7 +264,7 @@ async function apiRequest(endpoint, options = {}, retries = CONFIG.RETRY_ATTEMPT
     
     for (let attempt = 0; attempt <= retries; attempt++) {
         try {
-            console.log(`[RAGx] API Request (attempt ${attempt + 1}/${retries + 1}): ${endpoint}`);
+            console.log(`[RAGex] API Request (attempt ${attempt + 1}/${retries + 1}): ${endpoint}`);
             
             const response = await fetchWithTimeout(url, {
                 method: 'POST',
@@ -280,11 +279,11 @@ async function apiRequest(endpoint, options = {}, retries = CONFIG.RETRY_ATTEMPT
             }
             
             const data = await response.json();
-            console.log('[RAGx] API Response received');
+            console.log('[RAGex] API Response received');
             return { success: true, data };
             
         } catch (error) {
-            console.error(`[RAGx] API Request failed (attempt ${attempt + 1}):`, error);
+            console.error(`[RAGex] API Request failed (attempt ${attempt + 1}):`, error);
             
             // If last attempt, return error
             if (attempt === retries) {
@@ -307,7 +306,7 @@ async function apiRequest(endpoint, options = {}, retries = CONFIG.RETRY_ATTEMPT
 async function handleScanClick() {
     if (STATE.isProcessing || !STATE.currentUrl) return;
     
-    console.log('[RAGx] Starting scan automation');
+    console.log('[RAGex] Starting scan automation');
     STATE.isProcessing = true;
     
     // Re-fetch current URL from active tab
@@ -318,6 +317,10 @@ async function handleScanClick() {
         DOM.chatArea.innerHTML = '';
     }
     
+    // Reset session history on each scan to prevent context bleed between pages
+    STATE.sessionHistory = [];
+    await saveSessionHistory();
+    
     // Update UI
     setOverlay(true, 'Connecting to page...', 'Reading content');
     DOM.scanBtn.disabled = true;
@@ -326,7 +329,7 @@ async function handleScanClick() {
     
     try {
         // STEP 1: Index the URL
-        console.log('[RAGx] Step 1: Indexing URL');
+        console.log('[RAGex] Step 1: Indexing URL');
         setOverlay(true, 'Indexing Content...', `Crawling up to ${CONFIG.MAX_PAGES} pages`);
         
         const indexResult = await apiRequest('/index', {
@@ -340,20 +343,17 @@ async function handleScanClick() {
             throw new Error(indexResult.error || 'Indexing failed');
         }
         
-        console.log('[RAGx] Indexing request accepted');
+        console.log('[RAGex] Indexing request accepted');
         
         // STEP 2: Wait for indexing to complete
         setOverlay(true, 'Processing...', 'Building knowledge graph');
         await new Promise(resolve => setTimeout(resolve, 2500));
         
         // STEP 3: Generate smart analysis
-        console.log('[RAGx] Step 2: Generating analysis');
+        console.log('[RAGex] Step 2: Generating analysis');
         setOverlay(true, 'Analyzing Content...', 'Extracting insights');
         
         const analysisPrompt = `Analyze the indexed content. Return a valid JSON object (no markdown) with:
-- "type": (String) e.g., "Documentation", "Article", "Blog", "Forum"
-- "summary": (String) One-sentence summary
-- "topics": (Array of Strings) 3 key topics
 Output ONLY the JSON, no other text.`;
         
         const queryResult = await apiRequest('/query', {
@@ -408,10 +408,10 @@ Output ONLY the JSON, no other text.`;
         // Save to storage
         await saveSessionHistory();
         
-        console.log('[RAGx] Scan automation complete');
+        console.log('[RAGex] Scan automation complete');
         
     } catch (error) {
-        console.error('[RAGx] Scan automation failed:', error);
+        console.error('[RAGex] Scan automation failed:', error);
         
         // Fade out overlay on error too
         DOM.overlay.classList.add('fade-out');
@@ -441,7 +441,7 @@ async function handleSendClick() {
     
     if (!question || STATE.isProcessing || !STATE.isConnected) return;
     
-    console.log('[RAGx] User query:', question);
+    console.log('[RAGex] User query:', question);
     STATE.isProcessing = true;
     
     // Add user message
@@ -496,10 +496,10 @@ async function handleSendClick() {
         // Save to storage
         await saveSessionHistory();
         
-        console.log('[RAGx] Query completed successfully');
+        console.log('[RAGex] Query completed successfully');
         
     } catch (error) {
-        console.error('[RAGx] Query failed:', error);
+        console.error('[RAGex] Query failed:', error);
         
         removeMessage(loaderId);
         
@@ -573,7 +573,7 @@ function parseAnalysisResponse(response) {
         };
         
     } catch (error) {
-        console.warn('[RAGx] Failed to parse analysis JSON:', error);
+        console.warn('[RAGex] Failed to parse analysis JSON:', error);
         
         // Fallback: use raw text
         return {
@@ -611,72 +611,156 @@ function addMessage(text, role, meta = null) {
     const row = document.createElement('div');
     row.className = `msg-row ${role}`;
     
+    // Create bubble container
     const bubble = document.createElement('div');
-    bubble.className = `msg ${role}`;
-    
-    // Format text (support basic markdown and code tags)
-    let formattedText = text
-        .replace(/\n/g, '<br>')
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/<code>(.*?)<\/code>/g, '<code style="background:#f0f0f0;padding:2px 6px;border-radius:4px;font-family:monospace;font-size:0.9em;">$1</code>');
-    
-    bubble.innerHTML = formattedText;
-    
-    // Add metadata if provided (ONLY for bot messages)
-    if (meta && role === 'bot' && !meta.isError) {
-        const metaDiv = document.createElement('div');
-        metaDiv.className = 'msg-meta';
-        
-        if (meta.latency) {
-            metaDiv.innerHTML += `<span class="meta-tag"><i class="fas fa-clock"></i> ${meta.latency}s</span>`;
-        }
-        
-        if (meta.confidence !== undefined) {
-            const confScore = typeof meta.confidence === 'number' ? 
-                Math.round(meta.confidence * 100) : 
-                (meta.confidence === 'high' ? 90 : meta.confidence === 'medium' ? 70 : 50);
-            metaDiv.innerHTML += `<span class="meta-tag"><i class="fas fa-bolt"></i> ${confScore}%</span>`;
-        }
-        
-        if (meta.sources && meta.sources.length > 0) {
-            const sourceCount = meta.sources.length;
-            metaDiv.innerHTML += `<span class="meta-tag"><i class="fas fa-link"></i> ${sourceCount} source${sourceCount > 1 ? 's' : ''}</span>`;
-        }
-        
-        if (metaDiv.children.length > 0) {
-            bubble.appendChild(metaDiv);
-        }
-    }
+    bubble.className = `msg ${role} ${meta?.refusal ? 'refusal' : ''}`;
     
     row.appendChild(bubble);
     DOM.chatArea.appendChild(row);
-    
-    // Add suggestions BELOW the message (not inside)
-    if (meta && meta.suggestions && meta.suggestions.length > 0) {
-        const suggestionsRow = document.createElement('div');
-        suggestionsRow.className = 'msg-row bot';
+
+    // Render Logic
+    if (role === 'user') {
+        // Instant render for user messages - use marked if available
+        try {
+            if (typeof marked !== 'undefined' && marked.parse) {
+                bubble.innerHTML = marked.parse(text);
+            } else {
+                bubble.textContent = text;
+            }
+        } catch (e) {
+            console.warn('[RAGex] Marked parse error, using plain text:', e);
+            bubble.textContent = text;
+        }
+        scrollToBottom();
+    } else {
+        // BOT: Typing Effect with Marked.js
+        let formattedText = text;
         
-        const suggestionsDiv = document.createElement('div');
-        suggestionsDiv.className = 'suggestions';
+        // Only use marked for non-HTML content
+        try {
+            if (typeof marked !== 'undefined' && marked.parse && !text.includes('<') && !meta?.isError) {
+                formattedText = marked.parse(text);
+            }
+        } catch (e) {
+            console.warn('[RAGex] Marked parse error for bot message:', e);
+        }
         
-        meta.suggestions.forEach(suggestion => {
-            const chip = document.createElement('button');
-            chip.className = 'suggestion-chip';
-            chip.textContent = suggestion;
-            chip.onclick = () => {
-                DOM.userInput.value = suggestion;
-                DOM.userInput.focus();
-                handleSendClick();
-            };
-            suggestionsDiv.appendChild(chip);
-        });
+        // Prepare meta HTML for later
+        let metaHtml = '';
+        if (meta && !meta.isError) {
+            let sourceLinks = 'Internal';
+            if (meta.sources?.length > 0) {
+                sourceLinks = meta.sources.map(s => {
+                    try {
+                        return `<a href="${s}" target="_blank" class="source-link">${new URL(s).pathname}</a>`;
+                    } catch {
+                        return `<span class="source-link">${s}</span>`;
+                    }
+                }).join(', ');
+            }
+            
+            let metaContent = '';
+            if (meta.latency) {
+                metaContent += `<span class="meta-tag"><i class="fas fa-clock"></i> ${meta.latency}s</span>`;
+            }
+            if (meta.confidence !== undefined) {
+                const confScore = typeof meta.confidence === 'number' ? 
+                    Math.round(meta.confidence * 100) : 
+                    (meta.confidence === 'high' ? 90 : meta.confidence === 'medium' ? 70 : 50);
+                metaContent += `<span class="meta-tag"><i class="fas fa-bolt"></i> ${confScore}%</span>`;
+            }
+            if (sourceLinks !== 'Internal') {
+                metaContent += `<span class="meta-tag"><i class="fas fa-link"></i> ${sourceLinks}</span>`;
+            }
+            
+            if (metaContent) {
+                metaHtml = `<div class="msg-meta" style="opacity:0; transition: opacity 0.8s ease;">${metaContent}</div>`;
+            }
+        }
+
+        // For error messages, skip typing animation and render immediately
+        if (meta?.isError) {
+            bubble.innerHTML = formattedText;
+            if (metaHtml) {
+                bubble.innerHTML += metaHtml;
+                setTimeout(() => {
+                    const footer = bubble.querySelector('.msg-meta');
+                    if (footer) footer.style.opacity = '1';
+                }, 100);
+            }
+            scrollToBottom();
+            return;
+        }
+
+        // Start typing animation for regular bot messages
+        isTyping = true;
+        bubble.innerHTML = '<span class="cursor" style="display:inline-block; width:2px; height:1em; background:var(--accent); margin-left:4px; animation:blink 0.7s infinite;"></span>';
         
-        suggestionsRow.appendChild(suggestionsDiv);
-        DOM.chatArea.appendChild(suggestionsRow);
+        // Split text into words for typing effect
+        const words = formattedText.split(" ");
+        let currentHTML = "";
+        let i = 0;
+        
+        const typeInterval = setInterval(() => {
+            if (i < words.length) {
+                currentHTML += (i > 0 ? " " : "") + words[i];
+                bubble.innerHTML = currentHTML + '<span class="cursor" style="display:inline-block; width:2px; height:1em; background:var(--accent); margin-left:4px; animation:blink 0.7s infinite;"></span>';
+                scrollToBottom();
+                i++;
+            } else {
+                // Typing complete
+                clearInterval(typeInterval);
+                isTyping = false;
+                
+                // Remove cursor and add final content
+                bubble.innerHTML = currentHTML;
+                
+                // Append meta information with fade in
+                if (metaHtml) {
+                    bubble.innerHTML += metaHtml;
+                    setTimeout(() => {
+                        const footer = bubble.querySelector('.msg-meta');
+                        if (footer) footer.style.opacity = '1';
+                    }, 100);
+                }
+                
+                // Add suggestions below message with fade in
+                if (meta?.suggestions?.length > 0) {
+                    // Create a separate row for suggestions
+                    const suggestionsRow = document.createElement('div');
+                    suggestionsRow.className = 'msg-row bot';
+                    suggestionsRow.style.opacity = '0';
+                    suggestionsRow.style.transition = 'opacity 0.6s ease';
+                    
+                    const suggestionsContainer = document.createElement('div');
+                    suggestionsContainer.className = 'suggestions';
+                    
+                    meta.suggestions.forEach(s => {
+                        const chip = document.createElement('button');
+                        chip.className = 'suggestion-chip';
+                        chip.textContent = s;
+                        chip.addEventListener('click', () => {
+                            DOM.userInput.value = s;
+                            DOM.userInput.focus();
+                            handleSendClick();
+                        });
+                        suggestionsContainer.appendChild(chip);
+                    });
+                    
+                    suggestionsRow.appendChild(suggestionsContainer);
+                    DOM.chatArea.appendChild(suggestionsRow);
+                    
+                    // Fade in suggestions
+                    setTimeout(() => {
+                        suggestionsRow.style.opacity = '1';
+                        scrollToBottom();
+                    }, 150);
+                }
+                
+                scrollToBottom();
+            }
+        }, 35); // Speed: 35ms per word
     }
-    
-    scrollToBottom();
 }
 
 /**
@@ -687,7 +771,15 @@ function addLoadingMessage() {
     const row = document.createElement('div');
     row.id = id;
     row.className = 'msg-row bot';
-    row.innerHTML = `<div class="msg bot loading">Thinking</div>`;
+    row.innerHTML = `
+        <div class="msg bot" style="display: flex; align-items: center; gap: 12px; background: transparent; border: none; padding: 0;">
+            <div class="typing-indicator">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            </div>
+            <span style="font-size: 0.85rem; color: var(--text-sub); font-style: italic;">Processing your question...</span>
+        </div>`;
     
     DOM.chatArea.appendChild(row);
     scrollToBottom();
@@ -728,13 +820,17 @@ function showError(message) {
  */
 async function loadSessionHistory() {
     try {
-        const result = await chrome.storage.local.get(['sessionHistory']);
-        if (result.sessionHistory) {
-            STATE.sessionHistory = result.sessionHistory;
-            console.log('[RAGx] Loaded session history:', STATE.sessionHistory.length, 'messages');
+        const result = await chrome.storage.local.get([
+            'ragex_extension_sessionHistory',
+            'sessionHistory' // legacy key fallback
+        ]);
+        const stored = result.ragex_extension_sessionHistory ?? result.sessionHistory;
+        if (stored) {
+            STATE.sessionHistory = stored;
+            console.log('[RAGex] Loaded session history:', STATE.sessionHistory.length, 'messages');
         }
     } catch (error) {
-        console.error('[RAGx] Failed to load session history:', error);
+        console.error('[RAGex] Failed to load session history:', error);
     }
 }
 
@@ -744,12 +840,12 @@ async function loadSessionHistory() {
 async function saveSessionHistory() {
     try {
         await chrome.storage.local.set({
-            sessionHistory: STATE.sessionHistory,
-            lastActivity: Date.now()
+            ragex_extension_sessionHistory: STATE.sessionHistory,
+            ragex_extension_lastActivity: Date.now()
         });
-        console.log('[RAGx] Saved session history');
+        console.log('[RAGex] Saved session history');
     } catch (error) {
-        console.error('[RAGx] Failed to save session history:', error);
+        console.error('[RAGex] Failed to save session history:', error);
     }
 }
 
