@@ -1,12 +1,12 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 
 from app.rag.crawler import crawl_site_async
 from app.rag.chunker import chunk_pages_smart
 from app.rag.store import VectorStore
-from app.rag.generator import generate_answer, contextualize_question
+from app.rag.generator import generate_answer, contextualize_question, analyze_content
 from app.rag.retriever import AdaptiveRetriever
 from app.core.config import settings
 from app.core.logger import setup_logger
@@ -32,17 +32,19 @@ class QueryRequest(BaseModel):
     include_sources: bool = True
     debug: bool = False
 
+# New Model for Analytics
+class AnalysisResponse(BaseModel):
+    topics: List[str]
+    type: str
+    summary: str
+
 async def process_indexing(url: str, max_pages: int, max_depth: int):
     try:
         logger.info(f"🚀 Starting background crawl: {url}")
-        
-        # 1. Crawl
         pages = await crawl_site_async(url, max_pages, max_depth)
         
-        # 2. Safety Check & Fail-Safe Clearing
         if not pages:
-            logger.error(f"❌ Indexing Failed: No content found at {url}.")
-            # CRITICAL FIX: Clear old data so we don't chat about the wrong site
+            logger.error(f"❌ Indexing ABORTED: No content found at {url}.")
             store.clear()
             store.add([{
                 "id": "error_msg", 
@@ -51,13 +53,11 @@ async def process_indexing(url: str, max_pages: int, max_depth: int):
             }])
             return
 
-        # 3. Chunk
         chunks = chunk_pages_smart(pages)
         if not chunks:
             logger.error("❌ Indexing Failed: Content found but chunking produced 0 results.")
             return
 
-        # 4. Update Store
         store.clear()
         store.add(chunks)
         logger.info(f"✅ Indexing complete. Added {len(chunks)} chunks.")
@@ -69,6 +69,23 @@ async def process_indexing(url: str, max_pages: int, max_depth: int):
 async def index_endpoint(req: IndexRequest, tasks: BackgroundTasks):
     tasks.add_task(process_indexing, req.url, req.max_pages, req.max_depth)
     return {"status": "accepted", "message": "Indexing started."}
+
+@router.post("/analyze", response_model=AnalysisResponse)
+async def analyze_endpoint():
+    """Smart Analytics: Inspects the vector store content."""
+    # Retrieve random chunks to analyze
+    # We query with a generic term to get a spread of content
+    results = store.query("summary overview introduction", n_results=5)
+    
+    contexts = []
+    if results['documents'] and results['documents'][0]:
+        contexts = results['documents'][0]
+    
+    if not contexts:
+        return {"topics": [], "type": "Empty", "summary": "No content indexed."}
+        
+    analysis = analyze_content(contexts)
+    return analysis
 
 @router.post("/query")
 async def query_endpoint(req: QueryRequest):
@@ -84,10 +101,9 @@ async def query_endpoint(req: QueryRequest):
     
     retrieval = await retriever.retrieve(search_query, summary_mode=is_summary)
     
-    # Handle Empty DB (Refusal)
     if not retrieval["relevant"]:
         return {
-            "answer": "I cannot find information about this topic in the current context. (The website might not be indexed yet).",
+            "answer": "I cannot find relevant information in the indexed content.",
             "refusal": True,
             "sources": [],
             "confidence": 0.0,
