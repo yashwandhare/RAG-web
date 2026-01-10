@@ -29,7 +29,7 @@ RAGex runs locally on your machine. It crawls websites, saves them into a privat
 
 ### 1. Prerequisites
 
-* **Python 3.10+** (Python 3.14 is not supported yet)
+* **Python 3.10+**
 * **Groq API Key** (Free at [console.groq.com](https://console.groq.com))
 
 ### 2. One-Time Setup
@@ -56,7 +56,7 @@ scripts\setup.bat
 
 ## 🖥️ How to Run
 
-### Option A: Browser Extension (Recommended)
+### Option A: Browser Extension
 
 This starts the backend API so the extension can connect.
 
@@ -94,7 +94,3 @@ You can use RAGex entirely from the terminal. This script automatically starts t
 ---
 
 *License: MIT*
-
-```
-
-```
