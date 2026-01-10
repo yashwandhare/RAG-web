@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any, Dict, List
 
 from app.core.config import settings
@@ -12,18 +13,24 @@ class AdaptiveRetriever:
     def __init__(self, store: Any) -> None:
         self.store = store
 
+    def _extract_snippet(self, text: str, max_words: int = 15) -> str:
+        """Extract first N words from text as snippet for deep linking."""
+        words = text.split()[:max_words]
+        return " ".join(words)
+
     async def retrieve(self, query: str, summary_mode: bool = False) -> Dict[str, Any]:
-        # 1. Standard Vector Search
+        # 1. Standard Vector Search (Run in Thread)
         threshold = settings.DISTANCE_THRESHOLD
         if len(query.split()) < 4: threshold -= 0.05
         
         k_results = settings.TOP_K_RESULTS + 5 if summary_mode else settings.TOP_K_RESULTS
         
-        results = self.store.query(query, n_results=k_results)
+        # FIX: ChromaDB client is blocking, so we await it in a thread
+        results = await asyncio.to_thread(self.store.query, query, n_results=k_results)
         
         # Helper to process results
         def process_results(raw_res):
-            if not raw_res["documents"] or not raw_res["documents"][0]:
+            if not raw_res or not raw_res.get("documents") or not raw_res["documents"][0]:
                 return []
             docs = raw_res["documents"][0]
             dists = raw_res["distances"][0]
@@ -37,6 +44,7 @@ class AdaptiveRetriever:
                         {
                             "text": doc,
                             "source": meta.get("source"),
+                            "snippet": self._extract_snippet(doc),
                             "dist": dist,
                         }
                     )
@@ -50,11 +58,13 @@ class AdaptiveRetriever:
         
         if not summary_mode and (not valid or best_confidence < 0.35):
             logger.info(f"🧠 Engaging HyDE for difficult query: '{query}'")
-            hypothetical_answer = generate_hyde_doc(query)
+            
+            # FIX: LLM generation is blocking (network I/O), run in thread
+            hypothetical_answer = await asyncio.to_thread(generate_hyde_doc, query)
             logger.debug(f"   HyDE Document: {hypothetical_answer[:50]}...")
             
-            # Search again with the hypothetical answer
-            hyde_results = self.store.query(hypothetical_answer, n_results=k_results)
+            # Search again with the hypothetical answer (Blocking DB call)
+            hyde_results = await asyncio.to_thread(self.store.query, hypothetical_answer, n_results=k_results)
             hyde_valid = process_results(hyde_results)
             
             # Merge unique results
@@ -71,13 +81,26 @@ class AdaptiveRetriever:
                 "relevant": False,
                 "contexts": [],
                 "context_sources": [],
+                "sources": [],
                 "confidence": 0,
             }
+
+        # Build source objects with URL and snippet for deep linking
+        source_objects = []
+        seen_urls = set()
+        for v in valid:
+            url = v["source"]
+            if url and url not in seen_urls:
+                source_objects.append({
+                    "url": url,
+                    "snippet": v["snippet"]
+                })
+                seen_urls.add(url)
 
         return {
             "relevant": True,
             "contexts": [v["text"] for v in valid],
             "context_sources": [v["source"] for v in valid],
-            "sources": list({v["source"] for v in valid if v["source"]}),
+            "sources": source_objects,
             "confidence": 1 - valid[0]["dist"],
         }

@@ -5,8 +5,10 @@ python-dotenv
 aiohttp
 beautifulsoup4
 pypdf
-chromadb
+chromadb>=0.4.18
 sentence-transformers
-google-genai
+torch>=2.2.0
+playwright
 python-multipart
 openai
+textual

@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     """Centralized configuration with validation"""
     
     # API Keys
-    GROQ_API_KEY: str = "gsk_..."
+    GROQ_API_KEY: str = ""
     
     # Model Configuration
     # Model can be changed via environment: LLM_MODEL

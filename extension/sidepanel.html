@@ -80,56 +80,55 @@
             position: fixed;
             inset: 0;
             background: rgba(245, 242, 232, 0);
-            backdrop-filter: blur(0px);
-            display: none;
+            pointer-events: none;
+            display: flex;
             align-items: center;
             justify-content: center;
             flex-direction: column;
             z-index: 1000;
-            gap: 20px;
-            transition: all 0.6s ease;
+            transition: all 0.5s;
+            opacity: 0;
         }
 
         .overlay.active {
-            display: flex;
             background: rgba(245, 242, 232, 0.95);
-            backdrop-filter: blur(8px);
+            pointer-events: all;
+            opacity: 1;
         }
 
         .spinner {
-            width: 48px;
-            height: 48px;
+            width: 40px;
+            height: 40px;
             border: 3px solid rgba(37, 50, 86, 0.1);
             border-top-color: var(--accent);
             border-radius: 50%;
-            animation: spin 1s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+            animation: spin 1s infinite;
         }
 
         .overlay-text {
             font-family: var(--font-serif);
-            font-size: 16px;
             font-weight: 600;
+            margin-top: 16px;
             color: var(--accent);
-            letter-spacing: 0.5px;
-        }
-
-        .overlay-subtext {
-            font-size: 12px;
-            color: var(--text-sub);
         }
 
         /* ==================== Header Section ==================== */
-        .header {
-            padding: 16px 20px;
-            background: rgba(245, 242, 232, 0.7);
+        .header-stack {
+            background: rgba(245, 242, 232, 0.95);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             border-bottom: 1px solid var(--border-subtle);
+            flex-shrink: 0;
+            z-index: 10;
+            padding-bottom: 4px;
+        }
+        
+        .header-top {
+            padding: 14px 20px 12px 20px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            flex-shrink: 0;
-            z-index: 10;
+            gap: 16px;
         }
 
         .brand {
@@ -138,43 +137,145 @@
             font-weight: 700;
             color: var(--accent);
             letter-spacing: -0.5px;
+            flex-shrink: 0;
         }
 
         .status-badge {
             font-size: 11px;
             font-weight: 600;
-            padding: 6px 12px;
-            border-radius: 20px;
-            background: rgba(37, 50, 86, 0.05);
+            padding: 5px 12px;
+            border-radius: 12px;
+            background: rgba(37, 50, 86, 0.06);
             color: #666666;
-            transition: all 0.3s ease;
             display: flex;
             align-items: center;
             gap: 6px;
-            border: 1px solid transparent;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
         }
 
-        .status-badge::before {
+        .status-badge.active {
+            background: rgba(43, 138, 62, 0.12);
+            color: var(--status-green);
+        }
+
+        .status-badge.active::before {
             content: '';
             width: 6px;
             height: 6px;
             border-radius: 50%;
             background: currentColor;
-        }
-
-        .status-badge.active {
-            background: rgba(43, 138, 62, 0.1);
-            color: var(--status-green);
-            border-color: rgba(43, 138, 62, 0.2);
-        }
-
-        .status-badge.active::before {
-            box-shadow: 0 0 0 2px rgba(43, 138, 62, 0.2);
+            animation: pulse 2s infinite;
         }
 
         .status-badge.error {
             background: rgba(255, 107, 107, 0.1);
             color: var(--status-red);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        /* ==================== Tab Pills System ==================== */
+        .tabs-scroll-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px 12px 16px;
+            overflow-x: auto;
+            scrollbar-width: none; /* Hide scrollbar Firefox */
+        }
+        .tabs-scroll-area::-webkit-scrollbar { display: none; } /* Hide scrollbar Chrome */
+
+        .tab-pill {
+            padding: 8px 14px;
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 24px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-sub);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            min-width: 90px;
+            justify-content: space-between;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .tab-pill:hover { 
+            background: rgba(255, 255, 255, 0.45);
+            border-color: rgba(255, 255, 255, 0.6);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+        }
+        
+        .tab-pill.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+            box-shadow: 0 8px 16px rgba(37, 50, 86, 0.25);
+            transform: translateY(-2px);
+        }
+
+        .tab-pill.active:hover {
+            background: var(--accent-dark);
+            border-color: var(--accent-dark);
+            transform: translateY(-3px);
+        }
+
+        .tab-close {
+            opacity: 0.7;
+            font-size: 14px;
+            line-height: 1;
+            padding: 2px 4px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .tab-close:hover { 
+            opacity: 1; 
+            background: rgba(0,0,0,0.15); 
+            color: var(--status-red);
+        }
+        .tab-pill.active .tab-close:hover { 
+            background: rgba(255,255,255,0.25); 
+            color: #fff; 
+        }
+
+        .btn-new-tab {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1.5px solid var(--accent);
+            background: rgba(37, 50, 86, 0.05);
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            font-size: 16px;
+            font-weight: 300;
+        }
+        .btn-new-tab:hover { 
+            background: var(--accent-light);
+            border-color: var(--accent);
+            transform: scale(1.1) rotate(90deg);
+        }
+
+        .btn-new-tab:active {
+            transform: scale(0.95);
         }
 
         /* ==================== URL Connection Card ==================== */
@@ -259,7 +360,7 @@
             margin: 0;
             display: none;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
             background: rgba(255, 255, 255, 0.6);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(37, 50, 86, 0.1);
@@ -299,7 +400,7 @@
         }
 
         .ac-summary {
-            font-size: 14px;
+            font-size: 13px;
             line-height: 1.6;
             color: var(--text-main);
             font-family: var(--font-serif);
@@ -312,13 +413,11 @@
         }
 
         .ac-tag {
-            font-size: 11px;
+            font-size: 10px;
             color: var(--text-sub);
             background: rgba(37, 50, 86, 0.05);
-            padding: 4px 10px;
-            border-radius: 12px;
-            border: 1px solid transparent;
-            font-weight: 500;
+            padding: 3px 8px;
+            border-radius: 10px;
         }
 
         /* ==================== Chat Area ==================== */
@@ -432,6 +531,47 @@
 
         .msg.bot .meta-tag {
             background: rgba(37, 50, 86, 0.05);
+        }
+
+        /* Message Content Formatting */
+        .msg ul, .msg ol {
+            margin: 10px 0;
+            padding-left: 24px;
+        }
+
+        .msg li {
+            margin: 6px 0;
+            line-height: 1.6;
+        }
+
+        .msg p {
+            margin: 8px 0;
+        }
+
+        .msg h1, .msg h2, .msg h3, .msg h4, .msg h5, .msg h6 {
+            margin: 12px 0 6px 0;
+            font-weight: 700;
+            color: var(--text-blue);
+        }
+
+        .msg.user h1, .msg.user h2, .msg.user h3, .msg.user h4, .msg.user h5, .msg.user h6 {
+            color: #ffffff;
+        }
+
+        .msg code {
+            background: rgba(37, 50, 86, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .msg blockquote {
+            margin: 8px 0;
+            padding-left: 12px;
+            border-left: 3px solid rgba(37, 50, 86, 0.3);
+            color: var(--text-sub);
+            font-style: italic;
         }
 
         /* Suggestions */
@@ -621,12 +761,17 @@
     <div class="overlay" id="overlay">
         <div class="spinner"></div>
         <div class="overlay-text" id="overlayText">Initializing...</div>
-        <div class="overlay-subtext" id="overlaySubtext"></div>
     </div>
 
-    <div class="header">
-        <div class="brand">RAGex</div>
-        <div class="status-badge" id="statusBadge">Disconnected</div>
+    <div class="header-stack">
+        <div class="header-top">
+            <div class="brand">RAGex</div>
+            <div class="status-badge" id="statusBadge">Disconnected</div>
+        </div>
+        
+        <div class="tabs-scroll-area" id="tabsContainer">
+            <!-- Tabs will be dynamically added here -->
+        </div>
     </div>
 
     <div class="url-card">
