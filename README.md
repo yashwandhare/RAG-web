@@ -1,21 +1,9 @@
-```
-██████╗  █████╗  ██████╗ ███████╗██╗  ██╗
-██╔══██╗██╔══██╗██╔════╝ ██╔════╝╚██╗██╔╝
-██████╔╝███████║██║  ███╗█████╗   ╚███╔╝ 
-██╔══██╗██╔══██║██║   ██║██╔══╝   ██╔██╗ 
-██║  ██║██║  ██║╚██████╔╝███████╗██╔╝ ██╗
-╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝
-
-```
-
-# RAGex Companion
-
-**Your intelligent browsing companion.**
+## RAGex Companion
 RAGex runs locally on your machine. It crawls websites, saves them into a private database, and lets you chat with them using AI. It works as a Chrome Extension or a standalone CLI tool.
 
 ---
 
-## ⚡ Tech Stack
+## Tech Stack
 
 * **Core:** Python 3.10+, FastAPI, Uvicorn
 * **AI Engine:** Groq (Llama 3.1), SentenceTransformers (Embeddings), PyTorch (CPU)
@@ -25,7 +13,7 @@ RAGex runs locally on your machine. It crawls websites, saves them into a privat
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Prerequisites
 
@@ -34,7 +22,7 @@ RAGex runs locally on your machine. It crawls websites, saves them into a privat
 
 ### 2. One-Time Setup
 
-Run the setup script to create the environment and download necessary browser engines.
+Run the setup script to create the environment and download necessary packages.
 
 **Linux / macOS:**
 
@@ -54,9 +42,9 @@ scripts\setup.bat
 
 ---
 
-## 🖥️ How to Run
+## How to Run
 
-### Option A: Browser Extension
+### Browser Extension
 
 This starts the backend API so the extension can connect.
 
@@ -85,7 +73,7 @@ You can use RAGex entirely from the terminal. This script automatically starts t
 
 ---
 
-## ⚠️ Limitations
+## Limitations
 
 * **Media:** Does not support Images, PDFs, or YouTube yet.
 * **Auth:** Cannot access pages behind a login (e.g., Netflix, Gmail).
